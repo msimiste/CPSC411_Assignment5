@@ -104,7 +104,7 @@ printI = "PRINT_I" --Removes top integer value of stack and prints it.
 printB = "PRINT_B" --Removes top boolean value of stack and prints it.
 --printC = "PRINT_C"  --Removes top character value from top of stack and prints it. NOT PART OF M+
 
-printCode [String] -> String
+printCode :: [String] -> String
 printCode [] = []
 printCode (x:xs) = x + "\n" ++ printCode xs
 
@@ -112,7 +112,10 @@ startProg :: I_Prog -> String
 startProg (fbdys,num,stmts) = printCode code where
 	fcns = codeFcns
 	statements = codeStmts
-	start = progStart
+	start = progStart num
 	code = start ++ fcns ++ statements
 
 
+
+progStart :: Int -> [String]
+progStart num = (loadR sp) ++ (loadR sp) ++ (storeR fp) ++ (alloc num)
