@@ -7,7 +7,7 @@ data I_prog  = IPROG    ([I_fbody],Int,[I_stmt]) deriving (Eq,Show,Ord, Read)
     --   (c) the body: a list of statements
    
     
-data I_fbody = IFUN (String,[I_fbody],Int,[I_stmt]) deriving (Eq,Show,Ord, Read)
+data I_fbody = IFUN (String,[I_fbody],Int,Int,[I_stmt]) deriving (Eq,Show,Ord, Read)
     --    a function node consists of 
     --   (a) the label given to the function
     --   (b) the list of local functions declared

@@ -39,7 +39,7 @@ loadO offset = "LOAD_O " ++ show(offset) --Removes the stack pointer
 loadOS num offset = "LOAD_OS " ++ show(num) ++ " "++show(offset)  --Removes the integer m and the stack pointer from the top of the stack and replaces it by the value at offset m from the removed pointer. 
 storeO offset = "STORE_O " ++ show(offset) --Removes the stack pointer on top of the stack and the cell below and replaces the cell at offset m from the removed stack pointer by the removed cell.
 storeOS= "STORE_OS"--Removes the integer m, the stack pointer and the cell below from the top of the stack and replaces the cell at offset m inter by the removed cell.
-alloc num = "ALLOC_" ++ show(num) --Creates n void cells on top of the stack. To deallocate n cells from the top of the stack use a negative number. Removes the top n cells from the stack.
+alloc num = "ALLOC " ++ show(num) --Creates n void cells on top of the stack. To deallocate n cells from the top of the stack use a negative number. Removes the top n cells from the stack.
 allocS = "ALLOC_S" --ALLOC_S: Removes the integer n from the top of the stack and creates n void cells on top of the stack. To deallocate n cells from the top of the stack use a negative number.
 --loadC chr = "LOAD_C " ++ chr --Load a character onto the stack.
 
@@ -113,7 +113,7 @@ printCode [] = []
 printCode (x:xs) = x ++ "\n" ++ printCode xs
 
 startProg :: I_prog -> String
-startProg (IPROG (fbdys,num,stmts)) = ppShow(printCode code) where
+startProg (IPROG (fbdys,num,stmts)) =  printCode code where
     (num1, statements) = codeStmts 1 stmts
     (num2,fcns) = codeFcns num1 fbdys
     (num3,start) = progStart num2 num
@@ -138,7 +138,8 @@ codeStmt :: Int ->  I_stmt -> (Int, [String])
 codeStmt n stm = case stm of
     IASS (lev,off,exp) -> (n, ld1 ++ (loadR fp) : (chaseLink lev) ++ [(storeO off)]) where
         ld1 = codeExpr exp
-    IWHILE (exp,stm) -> (n,["test"])
+    IWHILE (exp,stm) -> (end,["lable : "++show(n)]++codeExpr exp ++ [jumpC ("lable"++show(n))] ++ statement) where
+        (end,statement) = codeStmt (n+1) stm
     ICOND (exp,stm1,stm2)-> (end, expression++jmpStm1++statement1++jmpStm2++firstLable++statement2++secondLable) where
         expression =  (codeExpr exp)
         jmpStm1 = [jumpC ("lable"++show(n))]
@@ -152,16 +153,13 @@ codeStmt n stm = case stm of
     IREAD_B (lev,off) -> (n, (readI:(loadR fp):[storeO off]))
     IPRINT_B (exp) -> (n, (codeExpr exp) ++ [printB])
     IRETURN (exp) ->  (n, codeExpr exp)
-    IBLOCK (fbodies, num, stmts) -> (num3,  start ++ fcns ++ statements) where
+    IBLOCK (fbodies, num, stmts) -> (num3,  begin++start ++ fcns ++ statements++leave) where
+        begin = [loadR fp]++[alloc 2]++[loadR sp]++[storeR fp]++[alloc num]++[loadI(num+3)]
         (num1, statements) = codeStmts n stmts
-        (num2, fcns)  = codeFcns num1 fbodies        
-        (num3, start) = progStart num2 num 
-  
+        (num2, fcns)  = codeFcns num1 fbodies
+        (num3, start) = progStart num2 num
+        leave = [loadR fp]++[loadO (num+1)]++[app neg_]++[allocS]++[storeR fp]
 
-{-
-codeExprs :: Int ->  [I_expr] -> (Int, [String])
-codeExprs [] = []
-codeExprs (x:xs) -> (codeExpr x) ++ (codeExprs xs)-}
 
 codeExpr ::  I_expr ->  [String]
 codeExpr exp = case exp of 
@@ -172,7 +170,7 @@ codeExpr exp = case exp of
     
 getOperation :: I_opn -> [String]
 getOperation x = case x of
-    ICALL (str,lev) -> (alloc 1):([loadR fp]++(chaseLink lev))++[loadR fp]++[storeR cp]++[jump str]
+    ICALL (str,lev) -> [alloc 1]++([loadR fp]++(chaseLink lev))++[loadR fp]++[storeR cp]++[jump str]
     IADD -> [app add_]
     IMUL -> [app mul_]
     ISUB -> [app sub_]
@@ -199,4 +197,10 @@ codeFcns n (x:xs) = (end, fcn++fcns) where
     (end,fcns) = codeFcns num1 xs
 
 codeFcn :: Int -> I_fbody -> (Int, [String])
-codeFcn n f =  (n, ["yes"])
+codeFcn n (IFUN (label,fbodies,vars,args,stmts)) = (num2, [label ++" : " ++ loadR sp] ++ start ++ statements ++ end ++ deAlloc ++ restoreCleanExit ++ fcns) where
+    (num1,statements) = codeStmts n stmts 
+    start = [storeR fp]++[alloc vars]++[loadI (vars+2)]--[loadR sp]++
+    end = [loadR fp]++[storeO (-(args+3))]++[loadR fp]++[loadO 0]++[loadR fp]++[storeO (-(args+2))]
+    deAlloc = [loadR fp]++[loadO (vars+1)]++[app neg_]++[allocS]
+    restoreCleanExit = [storeR fp]++[alloc args]++[jumpS]
+    (num2,fcns) = codeFcns num1 fbodies

@@ -6,6 +6,7 @@ import ErrM
 import SkelAssign
 import SymbolTable
 import MikeIRGen
+import MikeAM
 import Text.Show.Pretty
 
 import System.Environment
@@ -21,7 +22,9 @@ main = do
             let astree = transProg tree
             let symbT = beginProcess astree
             let iRep = transProgIR astree
-            putStrLn $ (ppShow) symbT
-            putStrLn $ (ppShow) astree
-            putStrLn $ (ppShow) iRep
+            let am = startProg iRep
+            --putStrLn $ (ppShow) symbT
+            --putStrLn $ (ppShow) astree
+            --putStrLn $ (ppShow) iRep
+            putStrLn $  am
         Bad emgs -> putStrLn emgs
