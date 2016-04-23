@@ -33,637 +33,111 @@ halt = "HALT" -- End of execution
 --loadf val = "LOAD_F" ++ show(val) -- Load a constant float/real number onto the stack.
 loadI num = "LOAD_I " ++ show(num) -- Load a constant integer onto the stack.
 loadB val = "LOAD_B " ++ val --load a constant boolean onto the stack.
-loadC chr = "LOAD_C " ++ chr --Load a character onto the sack.
-loadO offset = "LOAD_O " ++ show(offest) --Removes the stack pointer on top of the stack and replaces it by the value at offset m from the removed pointer. Note m can be negative in which case the offset is deeper into the stack.
-loadOS num offset = "LOAD_OS " ++ show(num) ++ " "++show(offset)  --Removes the integer m and the stack pointer from the top of the stack and replaces it by the value at offset m from the removed pointer. Note m can be negative in which case the offset is deeper into the stack.
+loadO offset = "LOAD_O " ++ show(offest) --Removes the stack pointer 
+loadOS num offset = "LOAD_OS " ++ show(num) ++ " "++show(offset)  --Removes the integer m and the stack pointer from the top of the stack and replaces it by the value at offset m from the removed pointer. 
 store0 offset = "STORE_O " ++ show(offest) --Removes the stack pointer on top of the stack and the cell below and replaces the cell at offset m from the removed stack pointer by the removed cell.
-storeOS= "STORE_OS " ++ show(num) ++ " " ++ show(offset) --Removes the integer m, the stack pointer and the cell below from the top of the stack and replaces the cell at offset m from the removed stack pointer by the removed cell.
+storeOS= "STORE_OS " ++ show(num) ++ " " ++ show(offset) --Removes the integer m, the stack pointer and the cell below from the top of the stack and replaces the cell at offset m inter by the removed cell.
 alloc num = "ALLOC_" ++ show(num) --Creates n void cells on top of the stack. To deallocate n cells from the top of the stack use a negative number. Removes the top n cells from the stack.
-allocS = "ALLOC_S" --ALLOC_S: Removes the integer n from the top of the stack and creates n void cells on top of the stack. To deallocate n cells from the top of the stack use a negative number. Removes the top n cells (below the integer) from the stack.
+allocS = "ALLOC_S" --ALLOC_S: Removes the integer n from the top of the stack and creates n void cells on top of the stack. To deallocate n cells from the top of the stack use a negative number.
+--loadC chr = "LOAD_C " ++ chr --Load a character onto the stack.
 
 --Data manipulation on heap
 loadH = "LOAD_H" --Removes the heap pointer on top the stack and replaces it by the elements of the heap record loaded on top of the stack.
-loadHO offest = "LOAD_HO " ++ show(offset) --Removes the heap pointer on top of the stack and replaces it by the value at offset m from the removed pointer in the heap. Note m cannot be negative nor can it be outside the heap block which is being accessed.
+loadHO offest = "LOAD_HO " ++ show(offset) --Removes the heap pointer on top of the stack and replaces it by the value at offset m from the removed pointer Note m cannot be negative  or utside the heap block
 storeH num = "STORE_H " ++ show(num) -- Removes the top m elements of the stack and replaces them by a heap pointer to a heap record consisting of those top m elements.
 storeHO offset = "STORE_HO " ++ show(offset) --Removes the heap pointer on top of the stack and the cell below and replaces the cell at offset m from the removed heap pointer by the removed cell. Note m cannot be negative nor can it be outside the heap block which is being accessed.
 
 allocH num = "ALLOC_H " show(num) -- Creates a block of n void cells on top of the heap and places the heap pointer to them on the top of the stack. Note one can only allocate to the heap there is no deallocation. Note that n must be greater than zero.
 
 --Arithmetic operations
-3APP <operation>: Removes the top one/two integer/boolean values and replaces them with the resulting of applying the operation.
-Values of ¡operation¿ are:
-(a) Float/real operations:
+app op = "APP " ++ op --Removes the top one/two integer/boolean values and replaces them with the resulting of applying the operation.
+
+-- NOT PART OF M+, keeping here just in case 
+{-Float/real operations:
 ADD_F SUB_F DIV_F MUL_F
 arity 2
 NEG_F FLOOR CIEL
-arity 1
-(b) Integer operations:
-ADD SUB DIV MUL
-arity 2
-NEG FLOAT
-arity 1
-(c) comparison operations on floats/reals
-LT_F,LE_F,GT_F,
-GE_F,EQ_F
-arity 2
-(d) comparison operations on integers
-LT,LE,GT,
-GE,EQ
-arity 2
+arity 1-}
+
+--Integer operations: arity 2
+add = "ADD"
+sub = "SUB"
+div = "DIV"
+mul = "MUL"
+neg = "NEG" --
+--FLOAT not part of M+
+
+-- NOT PART OF M+
+{- 
+--comparison operations on floats/reals -- arity 2
+LT_F,LE_F,GT_F,GE_F,EQ_F
+-}
+
+--comparison operations on integers --arity 2
+lt = "LT"
+le = "LE"
+gt = "GT"
+ge = "GE"
+eq = "EQ"
+
+--NOT PART OF M+
+{-
 (e) comparison operations on characters
 LT_C,LE_C,GT_C,
 GE_C,EQ_C
 arity 2
-(f) logical operations on booleans
-AND,OR
-arity 2
-NOT
-arity 1
-READ F: Read float/real value onto top of stack.
-READ I: Read integer value onto top of stack.
-READ B: Read boolean value onto top of stack.
-READ C: Reads next character to top of stack (the system buffers characters until the first
-newline).
-PRINT F: Removes top real value of stack and prints it.
-PRINT I: Removes top integer value of stack and prints it.
-PRINT B: Removes top boolean value of stack and prints it.
-PRINT C: Removes top character value from top of stack and prints it.
-6. Labels:
-Any instruction can be labelled. Labels must start with a lower case letter and can be followed
-by any sequence of lowercase letters, digits, or underscore.
-<label> : <instruction>
-( {label} = [a-z][_a-z0-9]* )
-A given line may contain many instructions: a label refers to the instruction it precedes.
-42.2
-Synopsis of instructions
-Notice that there are the following types of instruction:
-LOAD: This is loading something onto the stack/heap
-STORE: This is storing something on (or near) the top of the stack/heap somewhere.
-R means registers (needs register argument)
-O means stack offset (needs integer argument and stack pointer on top of the stack)
-H means the top of the stack to depth of cell is either stored on heap leaving a heap pointer
-or retrieved
-HO means heap offset (needs a positive integer argument and heap pointer on top of the
-stack)
-F means an real/float constant (needs float argument)
-I means an integer constant (needs integer argument)
-B means a boolean constant (needs boolean argument)
-JUMP: this alters the program counter (possibly)
-absolute jump
-C conditional on the top of stack
-S to code pointer on top of stack
-O advances the code pointer the number of steps indicated by the integer on the top of the
-stack.
-APP: This applies an operation to the top few elements of the stack (needs operation argument).
-ALLOC: allocating and deallocating space on the stack
-needs integer argument
-S allocating and deallocating space on the stack integer argument is taken from the top of
-the stack.
-H allocates space on the heap needs positive integer argument.
-PRINT F/I/B/C, READ F/I/B/C: interacts with outside world!
-53
-Activation record layout for M+ functions
-When a function is called in m+ here is the arrangement of the activation record:
-BEFORE
-argument 1
-argument n
-void
-static link
-dynamic link
-return ptr
-local var 1
-← %fp
-⇒
-AFTER
-return value
-return pointer
-local var n
-dealloc counter
-local arrays
-local var n
-3.1
-Caller/callee responsibilities
-In writing the code for creating an activation record the one tricky thing is to assign responsibilities
-correctly. The caller MUST BE responsible for
-(i) setting the ”return” code pointer
-(ii) setting the access link for the called routine
-as (i) only the caller knows where the code should be continued (ii) only the caller knows how many
-(static) levels the place of the call to the function is from the point of definition of the function.
-In contrast either the caller or the callee can save the current frame pointer and reset it to the top
-of stack. Here we make the former the responsibility of the caller and the latter the responsibility
-of the callee.
-Entering a function
-Thus, entry into a M+ function requires:
-1. Load the arguments on the stack (caller code: usual postfix evaluation)
-2. Caller starts the function call sequence:
-(a) Create space for a return value (this is vital if the function has no arguments: the caller
-is conservative and allocates the space anyway!).
-(caller code: ALLOC_1 this creates a ”void” stack element)
-6(b) Calculate the access pointer (caller code LOAD_R %fp LOAD_O -2 LOAD_O -2)
-(c) save the current frame pointer - dynamic link
-(caller code: LOAD_R %fp)
-(d) Loads the (return) program counter on the stack
-(caller code: LOAD_R %cp this advances the program counter one step and saves it on the
-stack recall that loading a code pointer will also advances it ...)
-(e) Call the function
-(caller code: JUMP function-label.)
-3. Function finishes the call sequence:
-(a) Sets the frame pointer to top of stack
-(function code: LOAD_R %sp STORE_R %fp)
-(b) Allocate the static local storage
-(function code: ALLOC_m)
-(c) Initializes the deallocation counter
-(function code: LOAD_I m+2)
-(d) Allocate the local arrays by calculating their bounds and allocating the required space
-and record this cumulative total in the deallocation counter.
-4. continue with the function body.
-Returning from a function
-Return from a function involves:
-1. Write the return value to the first argument slot. We assume the return value is at the top
-stack value: (function code: LOAD_R %fp STORE_O -(n+3) )
-2. Write the return pointer to the second argument slot
-(function code: LOAD_R %fp LOAD_O 0 LOAD_R %fp STORE_O -(n+2) )
-3. Deallocate the local storage
-(function code: LOAD_R %fp LOAD_O m+1 APP NEG ALLOC_S)
-4. Restore the old frame pointers
-(function code: STORE_R %fp)
-5. Clean up the argument storage leaving the return pointer and return value on the stack
-(function code: ALLOC_-n)
-6. Do a jump based on the code address on the stack ... (function code: JUMP S )
-7Collected code
-Collecting this code we have:
-(A) caller code:
-.....
-ALLOC_1
-LOAD_R %fp
-LOAD_O -2
-LOAD_O -2
-LOAD_R %fp
-STORE_R %cp
-JUMP <function label>
-......
-%
-%
-%
-%
-%
-%
-%
-void on stack
-calculate static/access link
-set the dynamic link
-save program counter
-jump to function code
-(B) function/callee code:
-<function label> : LOAD_R %sp
-STORE_R %fp
-ALLOC_m
-LOAD_I m+2
-......
-% set new FP to top stack element
-% allocate m void cells
-% initializes deallocation counter
-......
-LOAD_R %fp
-STORE_-(n+3)
-LOAD_R %fp
-LOAD_O 0
-LOAD_R %fp
-STORE_O -(n+2)
-LOAD_O m+1
-APP NEG
-ALLOC_S
-STORE_R %fp
-ALLOC_-n
-JUMP_S
-3.2
-%
-%
-%
-%
-% value of result loaded
-load frame pointer
-store <result> at begining
-load frame pointer
-load <return>
-%
-%
-%
-%
-%
-%
-& place <return> below <result>
-retrieve the deallocation pointer
-negate it
-deallocate the local storage
-restore old frame pointer
-remove top n stack elements
-jump to top of stack code address
-Example of a recursive program call ...
-Here is a complete example involving non-local references and a recursive function call. The m+
-program is (roughly!):
-var x:int;
-var y:int;
-fun exp(b:int):int
-8{ var z:int;
-begin if b=0 then z:= 1
-else z:= x * exp(b-1);
-return z;
-end
-}
-begin
-read x;
-read y;
-print exp(y);
-end
-This should translate into the following m+ assembler (which you should be able to run on the
-am+ machine simulator:
-LOAD_R %sp
-LOAD_R %sp
-STORE_R %fp
-ALLOC_2
-READ_I
-LOAD_R %fp
-STORE_O 1
-READ_I
-LOAD_R %fp
-STORE_O 2
-LOAD_R %fp
-LOAD_O 2
-ALLOC_1
-LOAD_R %fp
-LOAD_R %fp
-LOAD_R %cp
-JUMP fun_exp
-PRINT_I
-ALLOC_-3
-HALT
-% code for function exp ...
-fun_exp :
-LOAD_R %sp
-STORE_R %fp
-ALLOC_1
-LOAD_I -3
-LOAD_R %fp
-LOAD_O -4
-LOAD_I 0
-APP EQ
-JUMP_C label1
-LOAD_I 1
-% access pointer for program
-% set the frame pointer for prog
-% allocate space for variables
-% read and store x
-% read and store y
-%
-%
-%
-%
-%
-%
-%
-%
-%
-load y
-void on stack for return value
-static link
-dynamic link
-save program counter
-call function
-print result
-deallocate stack
-HALT!
-% set new %fp to top stack element
-% allocate 1 void cell for local var
-% set deallocation counter
-% load argument of fuction
-% test whether zero
-% conditional
-9label1 :
-label2:
-LOAD_R %fp
-STORE_O 1
-JUMP label2
-LOAD_R %fp
-LOAD_O -2
-LOAD_O 1
-LOAD_R %fp
-LOAD_O -4
-LOAD_I 1
-APP SUB
-ALLOC_1
-LOAD_R %fp
-LOAD_O -2
-LOAD_R %fp
-LOAD_R %cp
-JUMP fun_exp
-APP MUL
-LOAD_R %fp
-STORE_O 1
-LOAD_R %fp
-LOAD_O 1
-LOAD_R %fp
-STORE_O -4
-LOAD_R %fp
-LOAD_O 0
-LOAD_R %fp
-STORE_O -3
-LOAD_R %fp
-LOAD_O 2
-ALLOC_S
-STORE_R %fp
-ALLOC_-1
-JUMP_S
-% set z to 1
-% access x by chasing static link once
-% load argument b
-% obtain b-1
-% access link
-% dynamic link
-% save program counter
-% call function recursively
-% store result in z
-%
-%
-%
-%
-%
-load z again!
-load frame pointers
-store <result> at begining
-load frame pointer
-load <return>
-% place <return> below <result>
-%
-%
-%
-%
-%
-load deallocation counter
-remove top m+1 stack elements
-restore old frame pointer
-remove top n stack elements
-jump to top of stack code address
-104
-Activation record layout for M+ blocks
-A block is treated like a function call in that one must set up space for local variables and arrays
-which must be deallocated on leaving the block.
-Before entering a block the frame pointer is sitting below the local variables and arrays allocated
-for the calling routine. Entry into a block requires creating an activation record with its own frame
-pointer. This means that one must save the previous frame pointer. A block, however, does not
-need an explicit dynamic pointer as the dynamic and access pointers are always the same; nor does
-it need a return code pointer as the next instruction is the code to which one returns. One can
-therefore have a stripped-down activation record:
-static/dynamic link
-void
-void
-local var 1
-← %fp
-local var n
-dealloc counter
-local arrays
-Notice that on entering a block a new activation record is created: this means that the compiler
-has to calculate the access required for variable addresses using the block as the current frame. To
-allow uniform access pointer calculations a void and a copy of the frame pointer has been inserted
-in the activation record so the access link (which is the same as the dynamic link, namely, the
-previous frame pointer) is still at position −2.
-On exit from the block the only action is to decrement the stack pointer by m + 2, where m is
-the number of cells the block allocated for the local storage and to reinstate the old frame pointer.
-Entering a block
-Here is the entry sequence for a block invocation:
-(a) Save the old frame pointer
-(function code: LOAD_R %fp).
-(b) Allocate two void stack cell
-(function code: ALLOC_2).
-(c) Alter the frame pointer to point at the last void cell cell
-(function code: LOAD_R %sp STORE_R %fp).
-(d) Allocate the required fixed local storage for the block
-(function code: ALLOC_m).
-11(e) Set the deallocation counter
-(function code: LOAD_I m+3).
-(f) Allocate the local arrays.
-(g) Continue execution of the block code.
-Leaving a block
-Here is the exit sequence for leaving a block:
-(a) Deallocate the local storage by decrementing the stack pointer (block)
-(function code: LOAD_R %fp LOAD_0 m+1 APP NEG ALLOC_S)
-(b) Reset the frame pointer: after deallocation the old frame pointer should be sitting on top of
-the stack. This is how the number m + 3 was chosen!
-(function code STORE_R %fp).
-(c) Continue execution (callers code)
-Collected code
-Collecting this code we have:
-(A) Entering a block:
-LOAD_R %fp
-ALLOC_2
-LOAD_R %sp
-STORE_R %fp
-ALLOC_m
-LOAD_I m+3 % deallocation counter
-.....
-(B) Leaving a block:
-LOAD_R %fp
-LOAD_0 m+1 % deallocation counter
-APP NEG
-ALLOC_S
-STORE_R %fp
-125
-Using the heap in M+
-Data decarlarations such as:
-var x,y: intlist;
-data intlist = #nil | #cons of int * intlist;
-allow one to construct items which are stored on the heap. For example:
-data intlist = #nil | #cons of int * intlist;
-x := #nil;
-y := #cons(6,#nil);
-Both x and y should become heap pointers. x will point to a heap item with one entry, namely
-the constructor index. When a data declaration is made each constructor is assigned a constructor
-index (which is represented in the symbol table the “jump offset” associated with that constructor):
-Constructor
-#nil
-#cons
-Index/Jump offset
-1
-2
-Then the variable x becomes an entry on the stack which is a heap pointer to a heap record with
-one entry namely the index of #nil:
-x −→ 1
-(the constructor index)
-On the otherhand the variable y becomes a heap pointer to a heap record with three entries: the
-constructor index, the value 6 and the heap pointer x:
-2
-y −→ 6
-x
-The code to create a such heap items involves creating the record on top of he stack and then
-storing it on the heap. For the heap pointer x (which points to #nil) this is:
-LOAD_I 1
-STORE_H 1
-which leaves a heap pointer on top of the stack. For the heap pointer for y the code may look like:
-LOAD_I 1
-STORE_H 1
-LOAD_I 6
-LOAD_I 2
-STORE_H 3
-% creating pointer to #nil
-% constructor index
-% creat heap pointer to #cons(6,#nil)
-Associated with datatypes is the case statement: below are two suggestions of how to implement
-it. They differ by whether one sets up the required activation record on entering the case or on the
-branches. The latter method is slighly more efficient although it requires more code.
-13In both methods on entering a case one needs to calculate the argument to the case: this leaves
-a heap pointer sitting on the top of the stack.
-In the first method one then sets up an activation record similar to a block with this heap
-pointer immediately below it: one then copies the heap pointer to the stack in the activation record
-itself. When one has the heap pointer to the heap record of the datatype on top of the stack in the
-activation record one reloads the heap record onto the stack (with LOAD_H).
-fp →
-heap pointer
-static/dynamic link
-void
-void
-copy of pointer
-LOAD_H
-fp →
-heap pointer
-static/dynamic link
-void
-void
-cons argument 1
-...
-cons argument n
-jump offset
-This leaves the constructor index with any arguments below it on the top of the stack. One
-then does a JUMP O: the next instructions should be the jump instructions to the appropriate case
-branch code. This code is now treated like code inside a block although remember the arguments
-for the case are now on top of the activation record and so can be accessed by offsets from the
-frame pointer. The last instructions for the branch deallocates the local variables and the void
-items which start the block. When one returns to the common code one restores the frame pointer
-(which is on top of the stack) and one must remove the pointer to the argument of the case.
-Here is a description of the code required for this method:
-1. Calculate the value of the argument of the case statement leaving its heap pointer on top of
-the stack.
-2. Set up an activation record, reset the frame pointer, copy the heap pointer into the activation
-record and perform a jump offset to the branch code:
-LOAD_R %fp
-ALLOC_2
-LOAD_R %sp
-STORE_R %fp
-LOAD_R %fp
-LOAD_O -3
-LOAD_H
-JUMP_0
-JUMP case_1
-...
-JUMP case_n
-% copying the heap pointer
-3. On the branch of the case after completing the code deallocate the local storage (return
-sequence on branch):
-14case_i : ....
-ALLOC_-(n+2)
-JUMP return_case
-% code for branch
-% remove void cells
-4. On return to the common code complete the return sequence: restore the frame pointer,
-remove the heap pointer and continue.
-case_ret :
-STORE_R %fp
-ALLOC_-1
-...
-% restore fame pointer
-% remove heappointer
-In the second method one sets up the activation record after the jump and accesses the argu-
-ments by negative offsets from the frame pointer. These offsets are calculated and stored when they
-are added to the symbol table so one must have set up the appropriate calculation at that stage.
-This technique has the advantage that one does not have to copy the heap pointer one simply
-loads the heap item and does a jump offset. However, this does mean that each branch must now
-individually set up its own activation record and remove it. This does increases the code size on
-each branch and so, the overall code size, as the entry and return activation code must be repeated.
-In this case the stack after setting up the activation record on a branch looks like:
-fp →
-cons argument 1
-...
-cons argument n
-static/dynamic link
-void
-void
-Note that the arguments are below the frame pointer this time so one must access them by negative
-offset (all other variables are treated as non-local). At the end of the code from the branch one
-must deallocate the local storage restoring the frame pointer.
-Here is a description of the code required for this method:
-1. Calculate the value of the argument of the case statement leaving its heap pointer on top of
-the stack.
-2. Load the heap record and do a jump offset:
-LOAD_H
-JUMP_0
-JUMP case_1
-...
-JUMP case_n
-3. On the branch of the case set up a block activation record and after completing the code
-deallocate the local storage and restore the frame pointer:
-15case_i : LOAD_R %fp
-ALLOC_2
-LOAD_R %sp
-STORE_R %fp
-....
-ALLOC_-2
-STORE_%fp
-ALLOC_-n
-JUMP return_case
-%
-%
-%
-%
-code for branch
-remove void cells
-restore the frame pointer
-remove the arguments
-4. Return to the common code and continue.
-166
-Dynamic arrays in M+
-Notice the fact that functions are declared does not affect the storage allocation: they are compiled
-separately and the only thing we need is their label. However, array declarations are a different
-matter!
-Consider the problem of allocating an array declared as:
-a[10][20]:real;
-The sequence is
-1. Create an entry for the first dimension
-(function code LOAD_I 10).
-2. Create the array pointer by storing the stack pointer into the activation record entry corre-
-sponding to a.
-(function code LOAD_R %sp LOAD_R %fp STORE_O m a).
-3. Create the next dimension entry for the array
-(function code LOAD_I 20).
-4. Calculate the size of the array. In general this will not be known at compile time so it must be
-calculated. Here we shall load the two dimensions and multiply them. We need this number
-then for two reasons we need to add it to the deallocation counter and we need to allocate
-the given amount of stack space. Accordingly we reload it and the deallocation counter (and
-2) and form the sum putting this back into the deallocation counter.
-(function code:
-LOAD_R %fp
-LOAD_O m_a
-LOAD_O 1
-LOAD_R %fp
-LOAD_O m_a
-LOAD_O 2
-APP MUL
-LOAD_R %fp
-LOAD_O m+1
-LOAD_I 2
-LOAD_R %fp
-LOAD_O a_I
-LOAD_O 3
-APP ADD
-APP ADD
-LOAD_R %fp
-STORE_O m+1
-% the storage required by array
-% deallocation counter
-% storage space for array bounds
-% array size reloaded
-% store modified deallocation counter
-).
-175. Finally we allocate the required storage for the array.
-(function code ALLOC_S).
-This has now to be repeated for each declared array. In general, there may be a computation
-which will replace the simple loading of the dimension here (step 1 and 3 here).
-18
+-}
+
+-- logical operations on booleans -- arity 2
+and = "AND"
+or = "0R"
+not = "NOT" --arity 1
+
+
+readI = "READ_I" --Read integer value onto top of stack.
+readB = "READ_B" --Read boolean value onto top of stack.
+-- readC = "READ_C" --Reads next character to top of stack (the system buffers characters until the first NOT PART OF M+ newline).
+-- readF = "READ_F" --Read float/real value onto top of stack. NOT PART OF M+
+
+
+printI = "PRINT_I" --Removes top integer value of stack and prints it.
+printB = "PRINT_B" --Removes top boolean value of stack and prints it.
+--printC = "PRINT_C"  --Removes top character value from top of stack and prints it. NOT PART OF M+
+--printF = "PRINT_F" --Removes top real value of stack and prints it. NOT PART OF M+
+
+
+printCode :: [String] -> String
+printCode [] = []
+printCode (x:xs) = x + "\n" ++ printCode xs
+
+startProg :: I_Prog -> String
+startProg (fbdys,num,stmts) = printCode code where
+	fcns = codeFcns
+	statements = codeStmts stmts
+	start = progStart num
+	code = start ++ fcns ++ statements
+
+chaseLink :: Int -> [String]
+chaseLink 0 = []
+chaseLink n = (loadO -2):chaseLink(n-1)
+
+progStart :: Int -> [String]
+progStart num = (loadR sp) ++ (loadR sp) ++ (storeR fp) ++ (alloc num)
+
+
+codeStmts :: [I_stmt] -> [String]
+codeStmts [] = []
+
+
+codeStmt :: I_stmt -> [String]
+
+
+codeExprs :: [I_expr] -> [String]
+codeExprs [] = []
+
+codeExpr :: I_expr -> [String]
+
+codeFcns :: [I_fbody] -> [String]
+codeFcns [] = []
+
+codeFcn :: I_fbody -> [String]
