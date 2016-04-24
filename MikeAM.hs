@@ -110,20 +110,26 @@ printB = "PRINT_B" --Removes top boolean value of stack and prints it.
 
 printCode :: [String] -> String
 printCode [] = []
-printCode (x:xs) = x ++ "\n" ++ printCode xs
+printCode (x:xs) = case take 5 x of
+    "label" -> x ++ printCode xs
+    y -> x ++ "\n" ++ printCode xs
+
+--used for testing within prelude, ie for testing separte from assign4
+--startProg :: I_prog -> IO ()
+--startProg (IPROG (fbdys,num,stmts)) = outputTest(printCode code) where
 
 startProg :: I_prog -> String
-startProg (IPROG (fbdys,num,stmts)) =  printCode code where
+startProg (IPROG (fbdys,num,stmts)) = (printCode code) where
     (num1, statements) = codeStmts 1 stmts
     (num2,fcns) = codeFcns num1 fbdys
     (num3,start) = progStart num2 num
-    code = start ++ fcns ++ statements
+    code = start ++ statements ++ [alloc (-(num+1))]++[halt] ++ fcns  
 
 chaseLink :: Int -> [String]
 chaseLink 0 = []
 chaseLink n = (loadO (-2)):chaseLink(n-1)
 
-progStart :: Int ->  Int -> (Int,[String])
+progStart :: Int ->  Int -> (Int,[String]) 
 progStart n num = (n, [(loadR sp) , (loadR sp) , (storeR fp) , (alloc num)])
 
 
@@ -138,12 +144,13 @@ codeStmt :: Int ->  I_stmt -> (Int, [String])
 codeStmt n stm = case stm of
     IASS (lev,off,exp) -> (n, ld1 ++ (loadR fp) : (chaseLink lev) ++ [(storeO off)]) where
         ld1 = codeExpr exp
-    IWHILE (exp,stm) -> (end,["lable : "++show(n)]++codeExpr exp ++ [jumpC ("lable"++show(n))] ++ statement) where
+    IWHILE (exp,stm) -> (end,["label : "++show(n)]++codeExpr exp ++ [jumpC ("label"++show(n))] ++ statement) where
         (end,statement) = codeStmt (n+1) stm
-    ICOND (exp,stm1,stm2)-> (end, expression++jmpStm1++statement1++jmpStm2++firstLable++statement2++secondLable) where
+   -- ICOND (exp,stm1,stm2)-> (end, expression++jmpStm1++statement1++jmpStm2++firstLable ++statement2 ++secondLable) where
+    ICOND (exp,stm1,stm2)-> (end, expression++jmpStm1++statement1++jmpStm2++firstLable ++statement2 ++secondLable) where
         expression =  (codeExpr exp)
-        jmpStm1 = [jumpC ("lable"++show(n))]
-        jmpStm2 = [jumpC ("lable"++show(n+1))]
+        jmpStm1 = [jumpC ("label"++show(n))]
+        jmpStm2 = [jumpC ("label"++show(n+1))]
         firstLable = [genLable "" n]
         secondLable = [genLable "" (n+1)]
         (num2, statement1) = codeStmt (n+2) stm1
@@ -153,7 +160,7 @@ codeStmt n stm = case stm of
     IREAD_B (lev,off) -> (n, (readI:(loadR fp):[storeO off]))
     IPRINT_B (exp) -> (n, (codeExpr exp) ++ [printB])
     IRETURN (exp) ->  (n, codeExpr exp)
-    IBLOCK (fbodies, num, stmts) -> (num3,  begin++start ++ fcns ++ statements++leave) where
+    IBLOCK (fbodies, num, stmts) -> (num3,  begin++start ++ statements ++ fcns ++ leave) where
         begin = [loadR fp]++[alloc 2]++[loadR sp]++[storeR fp]++[alloc num]++[loadI(num+3)]
         (num1, statements) = codeStmts n stmts
         (num2, fcns)  = codeFcns num1 fbodies
@@ -187,8 +194,8 @@ getOperation x = case x of
 
 
 genLable :: String -> Int -> String
-genLable "" n = "lable" ++ show(n)++" :"
-genLable s n = s ++ show(n) ++ " :" 
+genLable "" n = "label" ++ show(n)++" : "
+genLable s n = s ++ show(n) ++ " : " 
 
 codeFcns :: Int ->  [I_fbody] -> (Int, [String])
 codeFcns n [] = (n,[])
@@ -199,8 +206,15 @@ codeFcns n (x:xs) = (end, fcn++fcns) where
 codeFcn :: Int -> I_fbody -> (Int, [String])
 codeFcn n (IFUN (label,fbodies,vars,args,stmts)) = (num2, [label ++" : " ++ loadR sp] ++ start ++ statements ++ end ++ deAlloc ++ restoreCleanExit ++ fcns) where
     (num1,statements) = codeStmts n stmts 
-    start = [storeR fp]++[alloc vars]++[loadI (vars+2)]--[loadR sp]++
-    end = [loadR fp]++[storeO (-(args+3))]++[loadR fp]++[loadO 0]++[loadR fp]++[storeO (-(args+2))]
-    deAlloc = [loadR fp]++[loadO (vars+1)]++[app neg_]++[allocS]
+    start = [storeR fp]++[alloc vars]++[loadI (-(vars+2))]--[loadR sp]++
+    end = [loadR fp]++[storeO (-(vars+3))]++[loadR fp]++[loadO 0]++[loadR fp]++[storeO (-(args+2))]
+    deAlloc = [loadR fp]++[loadO (vars+1)]++[allocS]
     restoreCleanExit = [storeR fp]++[alloc args]++[jumpS]
     (num2,fcns) = codeFcns num1 fbodies
+
+ 
+--just for testing
+outputTest :: String -> IO ()
+outputTest t = do
+    putStrLn $ t
+    

@@ -144,6 +144,7 @@ convertParams ((x,t):xs) = (x:(convertParams xs))
 
 condenseList :: [M_type] -> [M_type]
 condenseList [] = []
+condenseList (x:[]) = [x]
 condenseList(x:y:[]) 
 	| x == y = [y]
 	| otherwise = (x:[y])
